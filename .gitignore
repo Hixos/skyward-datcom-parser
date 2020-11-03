@@ -1,3 +1,5 @@
 for00*
 *.pyc
 venv/
+.vscode/
+__pycache__/
