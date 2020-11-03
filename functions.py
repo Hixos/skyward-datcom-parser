@@ -16,8 +16,6 @@ import scipy.io as s
 """ Function to split the output file in all the blocks
 that contains the aerodynamic values. It returns a list
 with all the blocks"""
-
-
 def block_split(file_handler):
     pattern = re.compile(r"\*+ \bFLIGHT CONDITIONS AND REFERENCE QUANTITIES \*+")
     linestring = file_handler.read()
@@ -31,8 +29,6 @@ def block_split(file_handler):
 
 """ This function is intended to retrieve all the starting values
 of each block parsed by block_split()"""
-
-
 def get_data(blocks):
     pattern1 = re.compile(r" *\bMACH NO\b *= * (-*[\d]+.[\d]*)")
     pattern2 = re.compile(r" *\bALTITUDE\b *= * (-*[\d]+.[\d]*)")
@@ -55,8 +51,6 @@ def get_data(blocks):
 
 """ This small function replace all the bad character in a list of strings
 with a _ and a '' (last character) """
-
-
 def replaceBadChars(listofStrings):
     list = []
     pattern = re.compile(r"[./\-]")
@@ -71,8 +65,6 @@ def replaceBadChars(listofStrings):
 
 """ This function strip the whitespaces among coefficients name and
 returns a list with the name of the coefficients for each block """
-
-
 def get_coeffs_name(blocks):
     cnames = []
     pattern = re.compile(r" *\bALPHA\b *([\w -/]*)")
