@@ -9,12 +9,15 @@ License: Read LICENSE File
 if __name__ == "__main__":
     import functions as f
     import argparse
-    
+
     parser = argparse.ArgumentParser(description='Parse the DATCOM output file')
-    
-    parser.add_argument('filename',nargs='?',help='''The name of the DATCOM 
-    output file. Default: "for006.dat"''',default='for006.dat')
-    
+
+    parser.add_argument('filename', nargs='?', help='''The name of the DATCOM 
+    output file. Default: "for006.dat"''', default='for006.dat')
+
     args = parser.parse_args()
-    
-    f.savemat(args.filename)
+
+    state_dict, final_data, coeffs = f.parse006(args.filename)
+
+    f.saveMat(args.filename, state_dict, final_data)
+    f.saveCSV(args.filename, state_dict, final_data, coeffs)

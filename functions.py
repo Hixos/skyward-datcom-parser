@@ -11,7 +11,10 @@ License: Read LICENSE file
 
 import re
 import numpy as n
-import scipy.io as s
+from scipy import io
+import json
+from os import path
+import itertools
 
 """ Function to split the output file in all the blocks
 that contains the aerodynamic values. It returns a list
@@ -160,19 +163,16 @@ def get_rawdata(blocks):
                 # And the alpha array is got twice
                 # so it has to be splitted
 
-                alpha = alpha[0:len(alpha) / 2]
+                alpha = alpha[0:int(len(alpha) / 2)]
 
         # Create Array
         raw_data.append(n.asanyarray(new_1))
 
-    return n.asarray(alpha), raw_data
+    return alpha, raw_data
 
 
-""" Main function that parse all the text file and save the data
-tables in .mat file """
-
-
-def savemat(filename):
+""" Parses the input file and outputs the state vectors and aerodynamic coefficients"""
+def parse006(filename):
     import numpy as n
 
     # Open the file
@@ -216,8 +216,8 @@ def savemat(filename):
 
     # Creating State Dictionary with all the state variables
     stateDict = {
-        "Machs": realM,
         "Alphas": alpha,
+        "Machs": realM,
         "Betas": realB,
         "Altitudes": realA,
         "Mom. Center": realXM,
@@ -284,5 +284,48 @@ def savemat(filename):
                 iB = 0
                 iA = iA + 1
 
+    return stateDict, final_data, totalc
+
+def getCoefficients(state, state_dict, final_data, strcoeffs):
+    coeffs = []
+    indices = []
+    for s in state:
+        indices.append(state_dict[s[0]].index(s[1]))
+    
+    for c in strcoeffs:
+        coeffs.append(final_data[c][tuple(indices)])
+
+    return coeffs
+
+def saveMat(filename, state_dict, final_data):
     # Salvo in Matlab
-    s.savemat(filename + ".mat", mdict={"Coeffs": final_data, "State": stateDict})
+    io.savemat(filename + ".mat", mdict={"Coeffs": final_data, "State": state_dict})
+
+
+def saveCSV(filename, state_dict, final_data, strcoeffs):
+
+    name, ext = path.splitext(filename)
+    with open(name + "_states.json", "w") as fstates:
+        fstates.write(json.dumps(state_dict, indent=4))
+
+    keys = list(state_dict.keys())
+    keys.remove("Mom. Center")
+
+    header = ",".join(keys) + "," + ",".join(strcoeffs) + "\n"
+    state_list = []
+    for key in keys:
+       
+        state_list.append(state_dict[key])
+
+    states = list(itertools.product(*state_list))
+
+    with open(name + "_coeffs.csv", "w") as fcsv:
+        fcsv.write(header)
+        for state in states:
+            coeff = getCoefficients(zip(keys, state), state_dict, final_data, strcoeffs)
+            vals = list(state) + coeff
+            line = ",".join([str(v) for v in vals])
+            fcsv.write(line + "\n")
+
+
+        
