@@ -8,7 +8,19 @@ The version is pre-alpha so it could behave very buggy.
 ## Usage ##
 
 ```
-python datcom_parser.py filename
+usage: datcom_parser.py [-h] [-f [FILENAME]] [-o OUTPUT [OUTPUT ...]]
+
+Parse the DATCOM output file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f [FILENAME], --filename [FILENAME]
+                        The name of the DATCOM output file. Default:
+                        "for006.dat"
+  -o OUTPUT [OUTPUT ...], --output OUTPUT [OUTPUT ...]
+                        Output type(s): 'csv' to output csv+json files, 'mat'
+                        to output Matlab data (.mat) file. Default: output
+                        both 'mat' and 'csv'
 ```
 
 The filename is optional. Without it the parser will look for the `for006.dat' file.
