@@ -13,7 +13,6 @@ import re
 import numpy as n
 from scipy import io
 import json
-from os import path
 import itertools
 
 """ Function to split the output file in all the blocks
@@ -171,8 +170,17 @@ def get_rawdata(blocks):
     return alpha, raw_data
 
 
-""" Parses the input file and outputs the state vectors and aerodynamic coefficients"""
 def parse006(filename):
+    """Parses the input file from datcom and outputs state vectors and aerodynamic coefficients
+
+    Args:
+        filename (str): Datcom input file (eg: for006.dat)
+
+    Returns:
+        [dict]: Dictionary containing state vectors
+        [dict]: Dictionary containing aerodynamic coefficients matrices
+        [list(str)]: List of the names of the aerodynamic coefficients
+    """
     import numpy as n
 
     # Open the file
@@ -247,10 +255,10 @@ def parse006(filename):
     # Number of coefficients
     numofc = len(totalc)
 
-    final_data = {}
+    aerodata = {}
     # I have to generate <numofc> 4D matrixes (preallocation)
     for i in range(numofc):
-        final_data[totalc[i]] = n.zeros((lalpha, lM, lB, lA))
+        aerodata[totalc[i]] = n.zeros((lalpha, lM, lB, lA))
 
     # Filling the 4D matrixes with data
     currentBigBlock = n.zeros((lalpha, numofc))
@@ -270,7 +278,7 @@ def parse006(filename):
 
         # Populating the final data matrix
         for cname, iC in zip(totalc, range(numofc)):
-            final_data[cname][:, iM, iB, iA] = currentBigBlock[:, iC]
+            aerodata[cname][:, iM, iB, iA] = currentBigBlock[:, iC]
 
         # Checking which parameter has changed
 
@@ -284,28 +292,54 @@ def parse006(filename):
                 iB = 0
                 iA = iA + 1
 
-    return stateDict, final_data, totalc
+    return stateDict, aerodata, totalc
 
-def getCoefficients(state, state_dict, final_data, strcoeffs):
+
+def getCoefficients(state, state_dict, aerodata, strcoeffs):
+    """ Returns the aerodynamic coefficients for the given state
+
+    Args:
+        state (list(int)): State (AoA, Mach, Beta, Altitude...)
+        state_dict (dict): All possible state vectors
+        aerodata (dict): Matrices containing aerodynamic coefficients
+        strcoeffs (list(str)): Array containing names for each aerodynamic coefficient
+
+    Returns:
+        [list(int)]: Aerodynamic coefficients for the given state
+    """
+
     coeffs = []
     indices = []
     for s in state:
         indices.append(state_dict[s[0]].index(s[1]))
-    
+
     for c in strcoeffs:
-        coeffs.append(final_data[c][tuple(indices)])
+        coeffs.append(aerodata[c][tuple(indices)])
 
     return coeffs
 
-def saveMat(filename, state_dict, final_data):
-    # Salvo in Matlab
-    io.savemat(filename + ".mat", mdict={"Coeffs": final_data, "State": state_dict})
+def saveMat(filename, state_dict, aerodata):
+    """ Outputs aerodynamic coefficient in a matlab data (.mat) file.
+
+    Args:
+        filename (str): Name of the output file
+        state_dict (dict): State dict as returned by parse006
+        aerodata (dict): Matrices containing aerodynamic coefficients
+    """
+    io.savemat(filename + ".mat", mdict={"Coeffs": aerodata, "State": state_dict})
 
 
-def saveCSV(filename, state_dict, final_data, strcoeffs):
+def saveCSV(filename, state_dict, aerodata, strcoeffs):
+    """ Outputs aerodynamic coefficient in a csv file, and state vectors in a json file.
 
-    name, ext = path.splitext(filename)
-    with open(name + "_states.json", "w") as fstates:
+    Args:
+        filename (str): Name of the output file
+        state_dict (dict): State dict as returned by parse006
+        aerodata (dict): Matrices containing aerodynamic coefficients
+        strcoeffs (list(str)): Array containing names for each aerodynamic coefficient
+    """
+
+    with open(filename + "_states.json", "w") as fstates:
         fstates.write(json.dumps(state_dict, indent=4))
 
     keys = list(state_dict.keys())
@@ -314,18 +348,14 @@ def saveCSV(filename, state_dict, final_data, strcoeffs):
     header = ",".join(keys) + "," + ",".join(strcoeffs) + "\n"
     state_list = []
     for key in keys:
-       
         state_list.append(state_dict[key])
 
     states = list(itertools.product(*state_list))
 
-    with open(name + "_coeffs.csv", "w") as fcsv:
+    with open(filename + "_coeffs.csv", "w") as fcsv:
         fcsv.write(header)
         for state in states:
-            coeff = getCoefficients(zip(keys, state), state_dict, final_data, strcoeffs)
+            coeff = getCoefficients(zip(keys, state), state_dict, aerodata, strcoeffs)
             vals = list(state) + coeff
             line = ",".join([str(v) for v in vals])
             fcsv.write(line + "\n")
-
-
-        
